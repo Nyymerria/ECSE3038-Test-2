@@ -1,4 +1,9 @@
-
+# ECSE3038 Test 2 - Smart Bathroom Fan API
+#
+# This API manages registered bathroom fans, stores humidity
+# readings in MongoDB, and sends fan settings through MQTT.
+#
+# The ESP32 uses an API key to authenticate when sending readings.
 import json
 import os
 import secrets
@@ -13,8 +18,11 @@ from pymongo import ASCENDING, MongoClient
 from pymongo.errors import DuplicateKeyError
 
 # Load database and MQTT settings from api/.env
-load_dotenv()
 
+load_dotenv()
+# Connect to MongoDB to store fan information and humidity readings.
+# Connection details are loaded from environment variables so
+# sensitive credentials are not written directly into the code.
 MONGODB_URI = os.getenv("MONGODB_URI")
 MQTT_NAME = os.getenv("MQTT_NAME", "skyethomas")
 MQTT_BROKER = "135.232.203.144"
@@ -36,9 +44,6 @@ fans.create_index([("key", ASCENDING)], unique=True)
 app = FastAPI(title="ECSE3038 Test 2 - Bathroom Fan API")
 
 
-# -----------------------------
-# Request models
-# -----------------------------
 
 class FanIn(BaseModel):
     mac: str
@@ -55,9 +60,7 @@ class SettingsIn(BaseModel):
     max_humidity: float = Field(ge=0, le=100)
 
 
-# -----------------------------
-# API key authentication
-# -----------------------------
+
 
 def fan_from_key(x_api_key):
     if not x_api_key:
@@ -77,9 +80,9 @@ def fan_from_key(x_api_key):
     return fan
 
 
-# -----------------------------
-# A1 - Register and list fans
-# -----------------------------
+# Register a new bathroom fan using its MAC address.
+# Generate a unique API key that the ESP32 will use
+# when submitting humidity readings.
 
 @app.post("/fans", status_code=201)
 def create_fan(body: FanIn):
@@ -123,9 +126,9 @@ def get_fan(mac: str):
     return fan
 
 
-# -----------------------------
-# A2 - Submit humidity readings
-# -----------------------------
+# Receive humidity readings from the ESP32.
+# Check the device's API key before saving the reading
+# to MongoDB with a timestamp.
 
 @app.post("/readings", status_code=201)
 def create_reading(
@@ -151,9 +154,8 @@ def create_reading(
     return reading
 
 
-# -----------------------------
-# A3 - Retrieve humidity readings
-# -----------------------------
+# Retrieve saved humidity readings from MongoDB.
+# Display the most recent readings first.
 
 @app.get("/readings")
 def list_readings(
@@ -172,9 +174,9 @@ def list_readings(
     )
 
 
-# -----------------------------
-# A4 - Update fan settings
-# -----------------------------
+# Update the selected fan's operating mode and humidity threshold.
+# Publish the new settings to MQTT so the ESP32 can react
+# without needing to restart.
 
 @app.put("/fans/{mac}/settings")
 def put_settings(
@@ -231,9 +233,8 @@ def put_settings(
     }
 
 
-# -----------------------------
-# A5 - Delete a registered fan
-# -----------------------------
+# Remove a registered fan from the database.
+# Verify the supplied API key before allowing deletion.
 
 @app.delete("/fans/{mac}", status_code=204)
 def delete_fan(

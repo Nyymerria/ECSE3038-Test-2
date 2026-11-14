@@ -1,4 +1,12 @@
 
+// ECSE3038 Test 2 - Smart Bathroom Fan
+//
+// This program uses an ESP32 and DHT22 sensor to monitor
+// bathroom humidity and control an LED representing a fan.
+//
+// The ESP32 sends readings to a FastAPI server and receives
+// fan settings through MQTT.
+
 #include <Arduino.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
@@ -6,15 +14,24 @@
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 #include "secrets.h"
-
+// Define the ESP32 pins used by the humidity sensor and fan.
+// GPIO 15 reads humidity from the DHT22 sensor.
+// GPIO 2 controls the LED representing the extractor fan.
 #define DHT_PIN 15
 #define FAN_PIN 2
+
+// Define the ESP32 pins used by the humidity sensor and fan.
+// GPIO 15 reads humidity from the DHT22 sensor.
+// GPIO 2 controls the LED representing the extractor fan.
 
 const char* WIFI_SSID = "Wokwi-GUEST";
 const char* WIFI_PASSWORD = "";
 
 const char* API_URL =
     "http://iot-skyethomas.mexicocentral.cloudapp.azure.com";
+// Define the ESP32 pins used by the humidity sensor and fan.
+// GPIO 15 reads humidity from the DHT22 sensor.
+// GPIO 2 controls the LED representing the extractor fan.
 
 const char* MQTT_NAME = "skyethomas";
 const char* MQTT_SERVER = "135.232.203.144";
@@ -43,7 +60,14 @@ bool statePublished = false;
 unsigned long lastReading = 0;
 unsigned long lastMqttAttempt = 0;
 
-// B4 and B5: Control LED and publish state when it changes
+// Decide whether the bathroom fan should be on or off.
+//
+// ON mode:   Keep the fan running.
+// OFF mode:  Keep the fan switched off.
+// AUTO mode: Run the fan when humidity exceeds the threshold.
+//
+// The fan stays off until valid settings have been received.
+
 void updateFan() {
     bool newState = false;
 
@@ -74,7 +98,13 @@ void updateFan() {
     }
 }
 
-// B3: Receive and validate MQTT settings
+// Establish a connection to the MQTT broker.
+// Subscribe to the fan settings topic and publish
+// the ESP32's online status.
+//
+// A Last Will message allows the broker to report
+// when the ESP32 disconnects unexpectedly.
+
 void mqttCallback(char* topic, byte* payload, unsigned int length) {
     String message;
 
@@ -128,8 +158,13 @@ void mqttCallback(char* topic, byte* payload, unsigned int length) {
 
     updateFan();
 }
+// Establish a connection to the MQTT broker.
+// Subscribe to the fan settings topic and publish
+// the ESP32's online status.
+//
+// A Last Will message allows the broker to report
+// when the ESP32 disconnects unexpectedly.
 
-// B2: Connect to MQTT and subscribe to settings
 void connectMQTT() {
     if (mqtt.connected()) {
         return;
@@ -170,7 +205,7 @@ void connectMQTT() {
     }
 }
 
-// B1: Send humidity reading every 10 seconds
+
 void sendReading(float humidity) {
     if (WiFi.status() != WL_CONNECTED) {
         return;
@@ -203,6 +238,10 @@ void sendReading(float humidity) {
     http.end();
 }
 
+
+// Run the initial setup when the ESP32 starts.
+// Configure the fan output, initialize the sensor,
+// and prepare the Wi-Fi and MQTT connections.
 void setup() {
     Serial.begin(115200);
 
@@ -245,6 +284,11 @@ void setup() {
     connectMQTT();
 }
 
+// Continuously maintain the MQTT connection,
+// process incoming settings, and monitor humidity.
+//
+// Humidity readings are sent to the API approximately
+// every 10 seconds.
 void loop() {
     if (WiFi.status() != WL_CONNECTED) {
         WiFi.reconnect();
