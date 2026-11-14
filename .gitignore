@@ -1,0 +1,19 @@
+
+
+api/.env
+api/venv/
+**/__pycache__/
+*.pyc
+
+# ESP32 API key
+board/include/secrets.h
+
+
+**/.pio/
+
+
+**/.vscode/
+
+
+.env
+venv/
